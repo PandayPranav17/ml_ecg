@@ -9,7 +9,7 @@ Next steps
 2) Load in more datasets, and save it in a folder titled data
 3) Plot more signals, identify which ones are with arrythmia and which ones are not
 4) Apply ML models and train
-
+5) Achive accuracy
 """
 
 #Load the CSV file
