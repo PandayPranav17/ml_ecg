@@ -2,6 +2,16 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.signal import butter, filtfilt
 
+"""
+Next steps
+
+1) Finalize ML model being applied
+2) Load in more datasets, and save it in a folder titled data
+3) Plot more signals, identify which ones are with arrythmia and which ones are not
+4) Apply ML models and train
+
+"""
+
 #Load the CSV file
 file_name = '/Users/pranavpanday/Downloads/100_ekg.csv'
 df = pd.read_csv(file_name)
