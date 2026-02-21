@@ -1,43 +1,55 @@
 import pandas as pd
-import matplotlib.pyplot as plt
+import numpy as np
+import asyncio
+from fastapi import FastAPI, WebSocket
 from scipy.signal import butter, filtfilt
+from fastapi.responses import FileResponse
 
-"""
-Next steps
+app = FastAPI()
 
-1) Finalize ML model being applied
-2) Load in more datasets, and save it in a folder titled data
-3) Plot more signals, identify which ones are with arrythmia and which ones are not
-4) Apply ML models and train
-5) Achive accuracy
-"""
-
-#Load the CSV file
+# ------------------------
+# Load ECG CSV
+# ------------------------
 file_name = '/Users/pranavpanday/Downloads/100_ekg.csv'
 df = pd.read_csv(file_name)
+y = df.iloc[:, 1].values
+fs = 360
 
-
-#Pick first two columns
-x = df.iloc[:, 0]   # sample numbers
-y = df.iloc[:, 1]   # ECG voltage (MLII)
-
-#Bandpass filter function
+# ------------------------
+# Bandpass Filter
+# ------------------------
 def bandpass_filter(signal, fs=360, lowcut=0.5, highcut=40.0, order=3):
     nyq = 0.5 * fs
     low = lowcut / nyq
     high = highcut / nyq
     b, a = butter(order, [low, high], btype='band')
-    filtered_signal = filtfilt(b, a, signal)
-    return filtered_signal
+    return filtfilt(b, a, signal)
 
-# Apply filter
 y_filtered = bandpass_filter(y)
 
+# ------------------------
+# WebSocket Endpoint
+# ------------------------
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    chunk_size = 20
+    delay = chunk_size / fs
 
-plt.figure(figsize=(12, 4))
-plt.plot(y_filtered[0:1000], color='blue')
-plt.title('Filtered ECG Signal MIT-BIH:1 sample = 1/360 sec')
-plt.xlabel('Sample number')
-plt.ylabel('Amplitude (mV)')
-plt.grid(True)
-plt.show()
+    for i in range(0, len(y_filtered), chunk_size):
+        chunk = y_filtered[i:i+chunk_size]
+        time_chunk = np.arange(i, i+len(chunk)) / fs
+
+        await websocket.send_json({
+            "time": time_chunk.tolist(),
+            "voltage": chunk.tolist()
+        })
+
+        await asyncio.sleep(delay)
+
+# ------------------------
+# Serve HTML File
+# ------------------------
+@app.get("/")
+async def get_html():
+    return FileResponse("display.html")

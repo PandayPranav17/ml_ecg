@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Real-Time ECG</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background-color: black; color: lime; font-family: Arial; }
+    </style>
+</head>
+<body>
+    <h2>Simulated Real-Time ECG</h2>
+    <canvas id="chart" width="1200" height="400"></canvas>
+
+    <script>
+        const ctx = document.getElementById('chart').getContext('2d');
+
+        const data = {
+            labels: [],
+            datasets: [{
+                label: 'ECG',
+                data: [],
+                borderColor: 'lime',
+                borderWidth: 2,
+                pointRadius: 0
+            }]
+        };
+
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: data,
+            options: {
+                animation: false,
+                responsive: true,
+                scales: {
+                    x: { type: 'linear', title: { display: true, text: 'Time (s)' }, ticks: { color: 'lime' }, grid: { color: '#003300' } },
+                    y: { min: -2, max: 2, title: { display: true, text: 'Amplitude (mV)' }, ticks: { color: 'lime' }, grid: { color: '#003300' } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        const socket = new WebSocket("ws://127.0.0.1:8000/ws");
+
+        socket.onmessage = function(event) {
+            const chunk = JSON.parse(event.data);
+            const time_chunk = chunk.time;
+            const voltage_chunk = chunk.voltage;
+
+            time_chunk.forEach((t, idx) => {
+                data.labels.push(t);
+                data.datasets[0].data.push(voltage_chunk[idx]);
+
+                if (data.labels.length > 3600) { // last 10s
+                    data.labels.shift();
+                    data.datasets[0].data.shift();
+                }
+            });
+
+            chart.update('none');
+        };
+
+        socket.onerror = function(error) {
+            console.error("WebSocket error:", error);
+        };
+    </script>
+</body>
+</html>
